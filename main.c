@@ -29,6 +29,7 @@
 #define EXTI_PR_PR0         ((uint32_t)0x00000001)        /*!< Pending bit 0 line 1972 */
 #define  EXTI_FTSR_TR0      ((uint32_t)0x00000001)        /*!< Falling trigger event configuration bit of line 0 line 1922 */
 #define  EXTI_IMR_MR0       ((uint32_t)0x00000001)        /*!< Interrupt Mask on line 0 line 1847 */
+#define  NVIC_ISER_SETENA_0 ((uint32_t)0x00000001)        /*!< bit 0 line 4746 */
 #define LED_PIN			(6)
 #define BUTTON_PIN 	(0)
 
@@ -113,8 +114,9 @@ void EXTI_Init(){
 		#define  EXTI_IMR_MR0       ((uint32_t)0x00000001)        /*!< Interrupt Mask on line 0 line 1847 */
 		EXTI->IMR |= EXTI_IMR_MR0;					// Enable EXTI0 interrupt request
 	
-		NVIC_SetPriority(EXTI0_IRQn, 0x03);		// Set EXTI0 priority 1(low priority)
-		NVIC_EnableIRQ(EXTI0_IRQn);					// Enable EXTI0 interrupt
+		NVIC_SetPriority(EXTI0_IRQn, 0x03);	// Set EXTI0 priority 1(low priority)
+		NVIC->ISER[0] |= 1<<6;							// Enable EXTI0 interrupt via ISER[0] bit 6
+		//NVIC_EnableIRQ(EXTI0_IRQn);					// Enable EXTI0 interrupt
 }
 
 void TIM4_Clock_Enable(){
