@@ -43,13 +43,14 @@ void GPIO_Clock_Enable(){
 void GPIO_Init_PortB(){
 		/* MODER0[1:0] corresponds to bit 0, MODER3[1:0] is to bit 3 of PA.3. MODER3[1:0] are bits 6&7 
 		in GPIOB->MODER register, mask 00 for input. LED is PB.6 so we use MODER6[1:0] involving bits
-		12 & 13. output 01 so |= 0x01 or &= ~0b10 or &= ~0x02 */
-		//GPIOB->MODER &= ~(0x03<<(2*6));		// Mode mask
+		12 & 13. output 01 so |= 0x01. Use &= ~0b11 or &= ~0x03 to clear */
+		//GPIOB->MODER &= ~(0x03<<(2*6));		// Clear mode bits. Uses 2 bits to select mode input, output, alternate function & analog
 		//GPIOB->MODER |= 0x01<<(2*6);			// Set pin PB.6 as digital output
+		GPIOB->MODER &= ~(0x03 << 12);			// Clear mode bits
 		GPIOB->MODER |= 0x01 << 12;					// Set pin PB.6 as digital output
-	
-		// Set output type as push-pull
-		GPIOB->OTYPER &= ~(1<<6);
+		
+		// Bits 15:0 OTy: Port x configuration bits (y = 0..15). OT6 for pin PB.6 as push-pull 0x0, open-drain 0x1
+		GPIOB->OTYPER &= ~(0x1<<6);					// Set PB.6 pin as push-pull output type
 	
 		// Set pin 6 as alternative function 2 (TIM4)
 		//GPIOB->AFR[0] |= 0X2 << (4*6);
@@ -65,12 +66,12 @@ void GPIO_Init_PortB(){
 void GPIO_Init_PortA(){
 		/* MODER0[1:0] corresponds to bit 0, MODER3[1:0] is to bit 3 of PA.3. MODER3[1:0] are bits 6&7 
 		in GPIOA->MODER register, mask 00 for input. Pushbutton is PA.0 so we use MODER0[1:0]
-		|= 0x00 or &= ~0x3 */
+		|= 0x00. Use &= ~0x03 to clear */
 		//GPIOA->MODER &= ~(0x03);					// Set pin PA.0 as digital input
-		GPIOA->MODER &= ~3U << 0;
+		GPIOA->MODER &= ~(3UL << 0);
 	
-		// Set output type as push-pull
-		GPIOA->OTYPER &= ~(0x1);
+		// Bits 15:0 OTy: Port x configuration bits (y = 0..15). OT0 for pin PA.0 as push-pull 0x0, open-drain 0x1
+		GPIOA->OTYPER &= ~(0x1<<0);					// Set PA.0 pin as push-pull output type
 	
 		// Set IO output speed
 		GPIOA->OSPEEDR &= ~(0x03);
@@ -80,10 +81,6 @@ void GPIO_Init_PortA(){
 		//GPIOA->PUPDR &= ~(0x03);
 		GPIOA->PUPDR &= ~3U << 0;
 		GPIOA->PUPDR |= 2U << 0;
-	
-		//GPIOA->MODER  &= ~(0x3 << (BUTTON_PIN*2));
-		//GPIOA->PUPDR  &= ~(0x3 << (BUTTON_PIN*2));
-		//GPIOA->PUPDR  |=  (0x1 << (BUTTON_PIN*2));
 }	
 
 void EXTI_Init(){
