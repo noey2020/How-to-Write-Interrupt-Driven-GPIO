@@ -26,6 +26,7 @@
 #define SYSCFG              ((SYSCFG_TypeDef *) SYSCFG_BASE)
 #define SYSCFG_EXTICR1_EXTI0  ((uint16_t)0x000F) /*!< EXTI 0 configuration line 3301 */
 #define SYSCFG_EXTICR1_EXTI0_PA 	((uint16_t)0x0000) /*!< PA[0] pin line 3309 */
+#define EXTI_PR_PR0         ((uint32_t)0x00000001)        /*!< Pending bit 0 line 1972 */
 
 #define LED_PIN			(6)
 #define BUTTON_PIN 	(0)
@@ -40,9 +41,12 @@ void GPIO_Clock_Enable(){
 }
 
 void GPIO_Init_PortB(){
-		// Set pin 6 as general-purpose output
-		GPIOB->MODER &= ~(0x03<<(2*6));		// Mode mask
-		GPIOB->MODER |= 0x01<<(2*6);			// Set pin 6 as digital output
+		/* MODER0[1:0] corresponds to bit 0, MODER3[1:0] is to bit 3 of PA.3. MODER3[1:0] are bits 6&7 
+		in GPIOB->MODER register, mask 00 for input. LED is PB.6 so we use MODER6[1:0] involving bits
+		12 & 13. output 01 so |= 0x01 or &= ~0b10 or &= ~0x02 */
+		//GPIOB->MODER &= ~(0x03<<(2*6));		// Mode mask
+		//GPIOB->MODER |= 0x01<<(2*6);			// Set pin PB.6 as digital output
+		GPIOB->MODER |= 0x01 << 12;					// Set pin PB.6 as digital output
 	
 		// Set output type as push-pull
 		GPIOB->OTYPER &= ~(1<<6);
@@ -59,7 +63,11 @@ void GPIO_Init_PortB(){
 }
 
 void GPIO_Init_PortA(){
-		GPIOA->MODER &= ~(0x03);					// Set pin 0 as digital input
+		/* MODER0[1:0] corresponds to bit 0, MODER3[1:0] is to bit 3 of PA.3. MODER3[1:0] are bits 6&7 
+		in GPIOA->MODER register, mask 00 for input. Pushbutton is PA.0 so we use MODER0[1:0]
+		|= 0x00 or &= ~0x3 */
+		//GPIOA->MODER &= ~(0x03);					// Set pin PA.0 as digital input
+		GPIOA->MODER &= ~3U << 0;
 	
 		// Set output type as push-pull
 		GPIOA->OTYPER &= ~(0x1);
@@ -69,7 +77,9 @@ void GPIO_Init_PortA(){
 		GPIOA->OSPEEDR |= 0x01;
 	
 		// Set IO no pull-up pull-down
-		GPIOA->PUPDR &= ~(0x03);
+		//GPIOA->PUPDR &= ~(0x03);
+		GPIOA->PUPDR &= ~3U << 0;
+		GPIOA->PUPDR |= 2U << 0;
 	
 		//GPIOA->MODER  &= ~(0x3 << (BUTTON_PIN*2));
 		//GPIOA->PUPDR  &= ~(0x3 << (BUTTON_PIN*2));
@@ -118,7 +128,8 @@ void TIM4_IRQ_handler(void){
 void EXTI0_IRQHandler(void){				// Defined & enumerated from interrupt vector table
 		if(EXTI->PR & (1<<0)){					// Check EXTI0 interrupt flag
 				GPIOB->ODR ^= 1<<LED_PIN;		// Toggle PB.6 LED
-				EXTI->PR |= (1<<0);					// Clear EXTI0 pending interrupt
+				//EXTI->PR |= (1<<0);					// Clear EXTI0 pending interrupt by set to 1
+				EXTI->PR |= EXTI_PR_PR0; 		// Clear EXTI0 pending interrupt by set to 1
 		}
 		GPIOB->ODR |= 1<<LED_PIN;	
 }
