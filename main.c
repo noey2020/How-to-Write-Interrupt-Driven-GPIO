@@ -27,7 +27,8 @@
 #define SYSCFG_EXTICR1_EXTI0  ((uint16_t)0x000F) /*!< EXTI 0 configuration line 3301 */
 #define SYSCFG_EXTICR1_EXTI0_PA 	((uint16_t)0x0000) /*!< PA[0] pin line 3309 */
 #define EXTI_PR_PR0         ((uint32_t)0x00000001)        /*!< Pending bit 0 line 1972 */
-
+#define  EXTI_FTSR_TR0      ((uint32_t)0x00000001)        /*!< Falling trigger event configuration bit of line 0 line 1922 */
+#define  EXTI_IMR_MR0       ((uint32_t)0x00000001)        /*!< Interrupt Mask on line 0 line 1847 */
 #define LED_PIN			(6)
 #define BUTTON_PIN 	(0)
 
@@ -43,7 +44,10 @@ void GPIO_Clock_Enable(){
 void GPIO_Init_PortB(){
 		/* MODER0[1:0] corresponds to bit 0, MODER3[1:0] is to bit 3 of PA.3. MODER3[1:0] are bits 6&7 
 		in GPIOB->MODER register, mask 00 for input. LED is PB.6 so we use MODER6[1:0] involving bits
-		12 & 13. output 01 so |= 0x01. Use &= ~0b11 or &= ~0x03 to clear */
+		12 & 13. output 01 so |= 0x01. Use &= ~0b11 or &= ~0x03 to clear. Bitwise logical OR |= is
+		friendly compared to =. When changing multiple bits, it's good practice to clear first then 
+		update. For example, we want b3b2b1b0 in register R to be 1001, we need to clear these four
+		bits by adding R &= ~0xF; then R |= 0x9; */
 		//GPIOB->MODER &= ~(0x03<<(2*6));		// Clear mode bits. Uses 2 bits to select mode input, output, alternate function & analog
 		//GPIOB->MODER |= 0x01<<(2*6);			// Set pin PB.6 as digital output
 		GPIOB->MODER &= ~(0x03 << 12);			// Clear mode bits
@@ -81,6 +85,11 @@ void GPIO_Init_PortA(){
 		//GPIOA->PUPDR &= ~(0x03);
 		GPIOA->PUPDR &= ~3U << 0;
 		GPIOA->PUPDR |= 2U << 0;
+	
+		/* Code for reading pin 6 if configured as input
+		uint32_t mask = 1UL<<6;
+		uint32_t input = (GPIOB->IDR & mask) == mask;
+		or uint32_t input = (GPIOB->IDR & mask) >> 7; */
 }	
 
 void EXTI_Init(){
@@ -94,12 +103,15 @@ void EXTI_Init(){
 		// Select trigger edge for EXTI0. 0 = rising edge trigger disabled
 		// 1 = rising edge trigger enabled. line 1897 stm32l1xx.h
 		// #define  EXTI_RTSR_TR0     ((uint32_t)0x00000001)        /*!< Rising trigger event configuration bit of line 0 */
-		EXTI->RTSR |= EXTI_RTSR_TR0;				// Set to rising edge 
-		EXTI->IMR |= EXTI_IMR_MR0;					// Enable EXTI0 interrupt
-		
-		//EXTI->IMR  |=  (1 << BUTTON_PIN);
-		//EXTI->RTSR &= ~(1 << BUTTON_PIN);
-		//EXTI->FTSR |=  (1 << BUTTON_PIN);
+		/* Bits 23:0 TRx: Falling edge trigger event configuration bit of line x. 1: Falling edge trigger enabled (for
+		Event and Interrupt) for input line x. line 1922 */
+		EXTI->RTSR |= EXTI_RTSR_TR0;				// Set rising edge trigger
+//		EXTI->RTSR |= EXTI_FTSR_TR0;				// Set falling edge trigger
+	
+		/* Bits 23:0 MRx: Interrupt mask on line x. 0: Interrupt request from Line x is masked. 1: Interrupt request from
+		Line x is not masked
+		#define  EXTI_IMR_MR0       ((uint32_t)0x00000001)        /*!< Interrupt Mask on line 0 line 1847 */
+		EXTI->IMR |= EXTI_IMR_MR0;					// Enable EXTI0 interrupt request
 	
 		NVIC_SetPriority(EXTI0_IRQn, 0x03);		// Set EXTI0 priority 1(low priority)
 		NVIC_EnableIRQ(EXTI0_IRQn);					// Enable EXTI0 interrupt
@@ -128,7 +140,6 @@ void EXTI0_IRQHandler(void){				// Defined & enumerated from interrupt vector ta
 				//EXTI->PR |= (1<<0);					// Clear EXTI0 pending interrupt by set to 1
 				EXTI->PR |= EXTI_PR_PR0; 		// Clear EXTI0 pending interrupt by set to 1
 		}
-		GPIOB->ODR |= 1<<LED_PIN;	
 }
 
 int main(void){
